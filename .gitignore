@@ -48,6 +48,9 @@ experiments/frontend-dashboard-tauri/src-tauri/target/
 workspace/
 *.log
 
+# ===== 工具生成（依赖来源为 requirements.txt，不跟踪 uv 锁文件） =====
+uv.lock
+
 # ===== 编辑器 / 系统 =====
 .idea/
 .vscode/
