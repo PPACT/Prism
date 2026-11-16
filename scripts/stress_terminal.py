@@ -23,7 +23,7 @@ import psutil  # type: ignore[import-untyped]
 
 ROOT = Path(__file__).resolve().parents[1]
 HOME = ROOT / ".claude" / "orchestrator"
-APP_EXE = "agentsentinel-console.exe"
+APP_EXE = "prism.exe"
 FLOOD = ROOT / "scripts" / "flood_stdout.py"
 MARKER = ROOT / ".claude" / "flood.started"
 FLOOD_SECONDS = 65
