@@ -1,0 +1,96 @@
+﻿<#
+.SYNOPSIS
+  Prism 编排服务 daemon 的启动/停止脚本（开发期工具，不接入产品）。
+
+.DESCRIPTION
+  默认在前台常驻运行 daemon；Ctrl+C 会触发优雅退出并回收全部 worker。
+  也可以使用 -Action start 让 CLI 以 detached 方式启动（注意：agent 的
+  Bash 进程树可能回收 detached daemon，长期使用建议 foreground）。
+
+.EXAMPLE
+  .\scripts\start_orchestrator.ps1 -Action foreground
+
+.EXAMPLE
+  .\scripts\start_orchestrator.ps1 -Action status
+
+.EXAMPLE
+  .\scripts\start_orchestrator.ps1 -Action stop
+
+.EXAMPLE
+  .\scripts\start_orchestrator.ps1 -Action start -Port 8765 -WorkerMode dummy
+#>
+param(
+    [ValidateSet('foreground', 'start', 'stop', 'status')]
+    [string]$Action = 'foreground',
+
+    [int]$Port = 0,
+
+    [ValidateSet('real', 'dummy')]
+    [string]$WorkerMode = 'real',
+
+    [double]$BudgetUsd = 0.50,
+    [double]$WorkerTimeoutSeconds = 600,
+    [double]$WatchdogSeconds = 30,
+    [double]$AckTimeoutSeconds = 120,
+    [double]$LostSeconds = 120,
+
+    [switch]$Watch
+)
+
+$ErrorActionPreference = 'Stop'
+$Root = Split-Path -Parent $PSScriptRoot
+Set-Location $Root
+
+if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
+    throw "uv not found in PATH. Run this script from a shell where the project's uv is available."
+}
+
+if (-not $env:PRISM_ORCH_HOME) {
+    $env:PRISM_ORCH_HOME = Join-Path $Root '.claude\orchestrator'
+}
+$env:PRISM_ORCH_WORKER_MODE = $WorkerMode
+$env:PRISM_ORCH_WORKER_BUDGET_USD = "$BudgetUsd"
+$env:PRISM_ORCH_WORKER_TIMEOUT_SECONDS = "$WorkerTimeoutSeconds"
+$env:PRISM_ORCH_WATCHDOG_SECONDS = "$WatchdogSeconds"
+$env:PRISM_ORCH_ACK_TIMEOUT_SECONDS = "$AckTimeoutSeconds"
+$env:PRISM_ORCH_LOST_SECONDS = "$LostSeconds"
+$env:PYTHONUTF8 = '1'
+$env:PYTHONIOENCODING = 'utf-8'
+# Keep the console and Python stdio on UTF-8 so localized Windows errors do not
+# turn into mojibake in daemon.log / worker logs.
+chcp 65001 | Out-Null
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
+switch ($Action) {
+    'foreground' {
+        Write-Host "[Prism] 正在启动编排中控..."
+        Write-Host "  home:        $env:PRISM_ORCH_HOME"
+        Write-Host "  worker mode: $WorkerMode"
+        $code = 1
+        try {
+            $serviceArgs = @('--serve', '--port', $Port)
+            if ($Watch) { $serviceArgs += '--watch' }
+            & uv run python -m tools.orchestrator.service @serviceArgs
+            $code = $LASTEXITCODE
+        }
+        finally {
+            Write-Host ""
+            Write-Host "[Prism] 编排中控已停止。"
+        }
+        exit $code
+    }
+    'start' {
+        # daemon start polls /health internally and only returns success once healthy.
+        & uv run python -m tools.orchestrator daemon start --port $Port
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        Write-Host "Orchestrator daemon is running. Home: $env:PRISM_ORCH_HOME"
+    }
+    'stop' {
+        & uv run python -m tools.orchestrator daemon stop
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    }
+    'status' {
+        & uv run python -m tools.orchestrator daemon status
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    }
+}

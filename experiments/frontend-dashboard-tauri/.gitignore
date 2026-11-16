@@ -1,0 +1,19 @@
+# 依赖与构建产物
+node_modules/
+dist/
+coverage/
+
+# 机器相关配置（项目根路径等）
+.env
+.env.local
+.env.*.local
+
+# Rust 构建产物
+src-tauri/target/
+src-tauri/gen/
+
+# 本机镜像配置（不提交）
+.cargo/
+
+# 本机生成的能力文件（含绝对路径，不提交）
+src-tauri/capabilities/local.dev.json

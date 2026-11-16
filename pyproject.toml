@@ -1,0 +1,23 @@
+# Prism 工作台：工具配置（运行时依赖见 requirements.txt）。
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["tools", "tests"]
+# 文档与前端产物不参与 Python 格式化。
+extend-exclude = ["README.md", "docs", "experiments/frontend-dashboard-tauri"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["tools"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+# hook 脚本以 `python .claude/hooks/<script>.py` 直接运行，`common` 是脚本同目录模块。
+mypy_path = ".claude/hooks"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# 项目未以可安装包形式分发（依赖走 requirements.txt），测试时把仓库根加入导入路径。
+pythonpath = ["."]

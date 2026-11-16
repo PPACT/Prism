@@ -1,0 +1,55 @@
+# ===== 敏感文件与密钥 =====
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+id_rsa*
+id_ed25519*
+credentials*.json
+secrets*.json
+*.secret
+*.token
+
+# ===== 本地 / 机器相关配置 =====
+.claude/settings.local.json
+.claude/session-role
+.claude/agents/
+.claude/skills/
+.claude/mailbox/
+.claude/orchestrator/
+.claude/tauri-target/
+.claude/logs/
+.claude/workspaces.sqlite3
+clean_all.log
+
+# ===== Python 虚拟环境 =====
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# ===== 工具缓存 =====
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ===== 前端构建产物 =====
+experiments/frontend-dashboard-tauri/node_modules/
+experiments/frontend-dashboard-tauri/dist/
+experiments/frontend-dashboard-tauri/src-tauri/target/
+
+# ===== 运行时产物 =====
+workspace/
+*.log
+
+# ===== 编辑器 / 系统 =====
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,152 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  connectionLabel,
+  daemonSummary,
+  errorMessage,
+  formatAgent,
+  formatTask,
+  formatTokenCount,
+  formatTokenDelta,
+  isDaemonDown,
+  localTimestamp,
+  shortProject,
+  shortTimestamp,
+} from "./format";
+
+describe("formatAgent", () => {
+  it("fills contracts and empty placeholders", () => {
+    expect(
+      formatAgent({
+        role: "dev",
+        pid: 1234,
+        pgid: 1234,
+        status: "registered",
+        alive: true,
+        last_heartbeat: "2026-11-09T00:00:00Z",
+        current_task_id: "",
+      }),
+    ).toEqual({
+      role: "dev",
+      pid: "1234",
+      pgid: "1234",
+      status: "registered",
+      alive: "在线",
+      lastHeartbeat: "2026-11-09T00:00:00Z",
+      currentTask: "—",
+      project: "—",
+    });
+    expect(formatAgent({ alive: false }).alive).toBe("已停止");
+    expect(formatAgent(null).role).toBe("—");
+  });
+});
+
+describe("formatTask", () => {
+  it("fills contracts", () => {
+    expect(
+      formatTask({
+        task_id: "T-1",
+        from_role: "doc",
+        to_role: "dev",
+        intent: "implement",
+        status: "running",
+        updated_at: "2026-11-09T00:00:00Z",
+      }),
+    ).toEqual({
+      taskId: "T-1",
+      fromRole: "doc",
+      toRole: "dev",
+      intent: "implement",
+      status: "running",
+      updatedAt: "2026-11-09T00:00:00Z",
+    });
+  });
+});
+
+describe("daemonSummary", () => {
+  it("handles missing daemon", () => {
+    expect(daemonSummary(null)).toBe("中控未启动");
+    expect(daemonSummary({ pid: 9, host: "127.0.0.1", port: 8954, started_at: "t0" })).toBe(
+      "pid 9 · 127.0.0.1:8954 · 启动于 t0",
+    );
+  });
+
+  it("appends the short project name", () => {
+    expect(
+      daemonSummary({
+        pid: 9,
+        host: "127.0.0.1",
+        port: 8954,
+        started_at: "t0",
+        project: "D:\\Code\\Work_Code\\projects\\AgentSentinel",
+      }),
+    ).toBe("pid 9 · 127.0.0.1:8954 · 启动于 t0 · 项目 AgentSentinel");
+  });
+});
+
+describe("shortProject", () => {
+  it("returns the last path segment", () => {
+    expect(shortProject("D:\\Code\\Work_Code\\projects\\AgentSentinel")).toBe("AgentSentinel");
+    expect(shortProject("/home/user/project/")).toBe("project");
+    expect(shortProject(null)).toBe("—");
+  });
+});
+
+describe("localTimestamp", () => {
+  it("formats local time as YYYY-MM-DD HH:mm:ss", () => {
+    const at = new Date(2026, 10, 9, 9, 5, 3);
+    expect(localTimestamp(at.toISOString())).toBe("2026-11-09 09:05:03");
+  });
+
+  it("returns raw text or placeholder when unparsable", () => {
+    expect(localTimestamp("not-a-date")).toBe("not-a-date");
+    expect(localTimestamp(null)).toBe("—");
+    expect(localTimestamp("")).toBe("—");
+  });
+});
+
+describe("shortTimestamp", () => {
+  it("formats to local MM-DD HH:mm:ss and passes through invalid values", () => {
+    expect(shortTimestamp(new Date(2026, 10, 9, 9, 5, 3).toISOString())).toBe("11-09 09:05:03");
+    expect(shortTimestamp("not-a-date")).toBe("not-a-date");
+    expect(shortTimestamp(null)).toBe("—");
+  });
+});
+
+describe("connectionLabel", () => {
+  it("maps states", () => {
+    expect(connectionLabel("open")).toBe("已连接（SSE）");
+    expect(connectionLabel("error")).toBe("连接中断，正在重连…");
+  });
+});
+
+describe("errorMessage", () => {
+  it("gives readable 401/503 hints", () => {
+    expect(errorMessage({ status: 401 })).toMatch(/未授权（401）/);
+    expect(errorMessage({ status: 503 })).toMatch(/中控未启动/);
+    expect(errorMessage(new Error("boom"))).toMatch(/boom/);
+    expect(isDaemonDown({ status: 503 })).toBe(true);
+    expect(isDaemonDown(new Error("boom"))).toBe(false);
+  });
+});
+
+describe("formatTokenDelta", () => {
+  it("shows raw integers below 1000 and compact k above", () => {
+    expect(formatTokenDelta(1)).toBe("1");
+    expect(formatTokenDelta(240)).toBe("240");
+    expect(formatTokenDelta(999)).toBe("999");
+    expect(formatTokenDelta(1_000)).toBe("1k");
+    expect(formatTokenDelta(1_240)).toBe("1.2k");
+    expect(formatTokenDelta(12_500)).toBe("13k");
+  });
+});
+
+describe("formatTokenCount", () => {
+  it("floors instead of rounding the displayed token count", () => {
+    expect(formatTokenCount(18_770)).toBe("18k");
+    expect(formatTokenCount(18_999)).toBe("18k");
+    expect(formatTokenCount(19_000)).toBe("19k");
+    expect(formatTokenCount(999)).toBe("999");
+    expect(formatTokenCount(1_050_000)).toBe("1M");
+  });
+});
